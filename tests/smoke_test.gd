@@ -4,6 +4,7 @@ extends SceneTree
 
 const SCENES := [
 	"res://scenes/main.tscn",
+	"res://scenes/test_drive.tscn",
 ]
 const FRAMES_PER_SCENE := 120
 
@@ -33,4 +34,6 @@ func _run() -> void:
 		inst.queue_free()
 		await process_frame
 		print("SMOKE OK: %s" % path)
+	for i in 5:
+		await process_frame
 	quit(1 if _failed else 0)
