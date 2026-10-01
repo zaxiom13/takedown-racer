@@ -67,6 +67,13 @@ func _physics_process(delta: float) -> void:
 	var to_cam := global_position - tpos
 	if to_cam.length() < distance * 0.7:
 		global_position = tpos + to_cam.normalized() * distance * 0.7
+	# pull in if terrain/road/trees block the view of the car
+	var pivot := tpos + Vector3.UP * 1.0
+	var q := PhysicsRayQueryParameters3D.create(pivot, global_position + (global_position - pivot).normalized() * 0.4)
+	q.exclude = [target.get_rid()]
+	var hit := get_world_3d().direct_space_state.intersect_ray(q)
+	if not hit.is_empty():
+		global_position = (hit.position as Vector3) + ((hit.normal as Vector3) * 0.3)
 	var look := tpos + heading * look_ahead + Vector3.UP * 0.8
 	if _shake > 0.0:
 		look += Vector3(randf_range(-1, 1), randf_range(-1, 1), 0) * _shake * 0.15

@@ -5,6 +5,7 @@ extends SceneTree
 const SCENES := [
 	"res://scenes/main.tscn",
 	"res://scenes/test_drive.tscn",
+	"res://scenes/race.tscn",
 ]
 const FRAMES_PER_SCENE := 120
 

@@ -9,6 +9,10 @@ var _speed: Label
 var _boost_bar: ProgressBar
 var _boost_label: Label
 var _info: Label
+var _race_label: Label
+var _center: Label
+var _flash := 0.0
+var race: RaceManager
 
 
 func _ready() -> void:
@@ -53,6 +57,30 @@ func _ready() -> void:
 	_info.offset_top = 60
 	_info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	add_child(_info)
+	_race_label = _label(22)
+	_race_label.position = Vector2(24, 60)
+	add_child(_race_label)
+	_center = _label(72)
+	_center.anchor_left = 0.5
+	_center.anchor_right = 0.5
+	_center.anchor_top = 0.35
+	_center.offset_left = -400
+	_center.offset_right = 400
+	_center.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	add_child(_center)
+
+
+## Hook up lap/checkpoint display.
+func set_race(r: RaceManager) -> void:
+	race = r
+	r.checkpoint_passed.connect(func(_i: int, split: float) -> void: _show("%s" % RaceManager.fmt_time(split), 1.2))
+	r.lap_completed.connect(func(l: int, lt: float) -> void: _show("LAP %d  %s" % [l, RaceManager.fmt_time(lt)], 2.0))
+	r.race_finished.connect(func(total: float) -> void: _show("FINISH  %s" % RaceManager.fmt_time(total), 999.0))
+
+
+func _show(text: String, secs: float) -> void:
+	_center.text = text
+	_flash = secs
 
 
 func _label(size: int) -> Label:
@@ -72,3 +100,15 @@ func _process(_delta: float) -> void:
 	_boost_label.text = "BOOST  FULL" if full else "BOOST"
 	_boost_bar.modulate = Color(1.6, 1.4, 1.0) if car.boosting else Color.WHITE
 	_info.text = "DRIFT!" if car.drifting else ""
+	if race:
+		_race_label.text = "LAP %d/%d\nTIME %s\nBEST %s\nCHECKPOINT %d/%d" % [mini(race.lap, race.laps), race.laps,
+			RaceManager.fmt_time(race.race_time), RaceManager.fmt_time(race.best_lap) if race.best_lap > 0.0 else "-:--.--",
+			race.next_check, race.checkpoints.size()]
+		if race.countdown_left > 0.0:
+			_center.text = str(ceili(race.countdown_left))
+		elif race.countdown_left > -0.8 and race.race_time < 0.8:
+			_center.text = "GO!"
+		elif _flash > 0.0:
+			_flash -= _delta
+		else:
+			_center.text = ""

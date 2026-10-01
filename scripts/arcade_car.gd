@@ -9,6 +9,7 @@ signal drift_changed(drifting: bool)
 
 @export_file("*.json") var car_json := "res://assets/cars/LK4/LK4.car.json"
 @export var player_controlled := true
+@export var spawn_height := 1.05            ## car origin above ground when (re)spawned
 @export var paint_color := Color(0.75, 0.06, 0.04)
 
 @export_group("Engine")
@@ -32,6 +33,7 @@ signal drift_changed(drifting: bool)
 @export var drift_speed_loss := 0.04         ## fraction of speed lost per second while drifting
 @export var roll_force_height := 0.15        ## 0 = tyre forces at contact (rolls), 1 = at CoM (never rolls)
 @export var downforce := 2.5                 ## N per (m/s)^2
+@export var air_gravity_extra := 0.7         ## extra g while airborne (arcade: short, punchy jumps)
 
 @export_group("Boost")
 @export var boost_accel := 9.0
@@ -50,6 +52,8 @@ var boosting := false
 var drifting := false
 var speed := 0.0                             ## signed forward speed m/s
 var wheels_on_ground := 0
+var input_locked := false                    ## true during countdown / crashes
+var respawn_provider: Callable               ## returns a Transform3D to respawn at (track-aware)
 
 var _wheels: Array[Dictionary] = []
 var _steer := 0.0
@@ -144,6 +148,13 @@ func set_wheel_nodes(nodes: Array) -> void:
 
 
 func reset_to(xform: Transform3D) -> void:
+	# drop onto whatever is below so the wheels start just touching (avoids suspension launch)
+	if is_inside_tree():
+		var q := PhysicsRayQueryParameters3D.create(xform.origin + Vector3.UP * 3.0, xform.origin - Vector3.UP * 20.0)
+		q.exclude = [get_rid()]
+		var hit := get_world_3d().direct_space_state.intersect_ray(q)
+		if not hit.is_empty():
+			xform.origin.y = (hit.position as Vector3).y + spawn_height
 	_spawn_xform = xform
 	global_transform = xform
 	linear_velocity = Vector3.ZERO
@@ -154,6 +165,10 @@ func reset_to(xform: Transform3D) -> void:
 func _physics_process(delta: float) -> void:
 	if player_controlled:
 		_read_input()
+	if input_locked:
+		throttle = 0.0
+		boost_held = false
+		brake_input = 1.0 if absf(speed) < 2.0 else brake_input
 	var xf := global_transform
 	var fwd := -xf.basis.z
 	var right := xf.basis.x
@@ -212,8 +227,9 @@ func _physics_process(delta: float) -> void:
 		var damper := _bounce if comp_vel > 0.0 else _rebound
 		var susp := maxf(0.0, _spring * compression + damper * comp_vel)
 		# bump stop
-		if compression > _travel * 0.9:
-			susp += (compression - _travel * 0.9) * _spring * 8.0
+		if compression > _travel * 0.85:
+			susp += (compression - _travel * 0.85) * _spring * 3.0
+		susp = minf(susp, load_per_wheel * 4.0)  # cap so landings/kerbs can't catapult the car
 		var n: Vector3 = hit.normal
 		var contact: Vector3 = hit.position
 		apply_force(n * susp, contact - global_position)
@@ -297,8 +313,9 @@ func _physics_process(delta: float) -> void:
 	apply_central_force(-up * downforce * speed * speed)
 	apply_central_force(-vel * vel.length() * drag * mass)
 
-	# --- air control: level out & small pitch/roll steering ---
+	# --- air control: level out & small pitch/roll steering, extra gravity so jumps don't float ---
 	if wheels_on_ground == 0:
+		apply_central_force(Vector3.DOWN * mass * 9.8 * air_gravity_extra)
 		var level_axis := up.cross(Vector3.UP)
 		apply_torque(level_axis * mass * 3.0)
 		apply_torque(Vector3.UP * -steer_input * mass * 1.2)
@@ -345,6 +362,9 @@ func _set_drifting(on: bool) -> void:
 
 ## Put the car back on its wheels where it is (or at spawn if far below the world).
 func respawn_here() -> void:
+	if respawn_provider.is_valid():
+		reset_to(respawn_provider.call())
+		return
 	var xf := global_transform
 	if xf.origin.y < -50.0:
 		reset_to(_spawn_xform)
