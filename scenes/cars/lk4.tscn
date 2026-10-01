@@ -1,0 +1,54 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://scripts/arcade_car.gd" id="1"]
+[ext_resource type="PackedScene" path="res://assets/cars/LK4/LK4_body.glb" id="2"]
+[ext_resource type="PackedScene" path="res://assets/cars/LK4/LK4_glass.glb" id="3"]
+[ext_resource type="PackedScene" path="res://assets/cars/LK4/LK4_interior.glb" id="4"]
+[ext_resource type="PackedScene" path="res://assets/cars/LK4/LK4_wheel.glb" id="5"]
+
+[ext_resource type="Script" path="res://scripts/engine_audio.gd" id="6"]
+
+[sub_resource type="BoxShape3D" id="box"]
+size = Vector3(1.9, 0.75, 4.0)
+
+[sub_resource type="PhysicsMaterial" id="pm"]
+friction = 0.3
+bounce = 0.05
+
+[node name="LK4" type="RigidBody3D"]
+physics_material_override = SubResource("pm")
+script = ExtResource("1")
+car_json = "res://assets/cars/LK4/LK4.car.json"
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.2, 0)
+shape = SubResource("box")
+
+[node name="Body" type="Node3D" parent="."]
+
+[node name="LK4_body" parent="Body" instance=ExtResource("2")]
+
+[node name="LK4_glass" parent="Body" instance=ExtResource("3")]
+
+[node name="LK4_interior" parent="Body" instance=ExtResource("4")]
+
+[node name="Wheels" type="Node3D" parent="."]
+
+[node name="FL" type="Node3D" parent="Wheels"]
+
+[node name="Mesh" parent="Wheels/FL" instance=ExtResource("5")]
+
+[node name="FR" type="Node3D" parent="Wheels"]
+
+[node name="Mesh" parent="Wheels/FR" instance=ExtResource("5")]
+
+[node name="RL" type="Node3D" parent="Wheels"]
+
+[node name="Mesh" parent="Wheels/RL" instance=ExtResource("5")]
+
+[node name="RR" type="Node3D" parent="Wheels"]
+
+[node name="Mesh" parent="Wheels/RR" instance=ExtResource("5")]
+
+[node name="EngineAudio" type="Node3D" parent="."]
+script = ExtResource("6")

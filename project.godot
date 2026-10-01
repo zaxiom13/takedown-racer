@@ -1,0 +1,31 @@
+; Engine configuration file.
+config_version=5
+
+[application]
+
+config/name="Takedown Racer"
+config/description="Arcade crash racer."
+run/main_scene="res://scenes/race.tscn"
+config/features=PackedStringArray("4.7", "GL Compatibility")
+
+[autoload]
+
+GameInput="*res://scripts/game_input.gd"
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/aspect="expand"
+window/vsync/vsync_mode=1
+
+[physics]
+
+common/physics_ticks_per_second=60
+3d/physics_engine="Jolt Physics"
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+anti_aliasing/quality/msaa_3d=1
